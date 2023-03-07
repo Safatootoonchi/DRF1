@@ -1,46 +1,55 @@
-from rest_framework import status
-from rest_framework.decorators import APIView
+from django.contrib.auth.models import User
+from rest_framework import status, permissions
+from rest_framework.decorators import APIView, api_view
 from rest_framework.response import Response
+from rest_framework.reverse import reverse
 
+from .permissions import IsOwnerOrReadOnly
 from .models import *
-from .serializers import SnippetSerializer
+from .serializers import SnippetSerializer, UserSerializer
 from django.shortcuts import get_object_or_404
+from rest_framework import mixins
+from rest_framework import generics
+from rest_framework import renderers
 
 
-class SnippetList(APIView):
-    def get(self, request):
-        snippet = Snippet.objects.all()
-        ser_data = SnippetSerializer(instance=snippet, many=True)
-        return Response(data=ser_data.data, status=status.HTTP_200_OK)
+class SnippetList(generics.ListCreateAPIView):
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    queryset = Snippet.objects.all()
+    serializer_class = SnippetSerializer
 
-    def post(self, request):
-        data = request.data
-        ser_data = SnippetSerializer(data=data)
-        if ser_data.is_valid():
-            ser_data.save()
-            return Response(data=ser_data.data, status=status.HTTP_201_CREATED)
-        return Response(data=ser_data.errors, status=status.HTTP_400_BAD_REQUEST)
+    def perform_create(self, serializer):
+        serializer.save(owner=self.request.user)
 
 
-class SnippetDetail(APIView):
-
-    def get(self, request, pk):
-        snippet = get_object_or_404(Snippet, pk=pk)
-        ser_data = SnippetSerializer(instance=snippet)
-        return Response(ser_data.data, status=status.HTTP_200_OK)
-
-    def put(self, request, pk):
-        snippet = get_object_or_404(Snippet, pk=pk)
-        data = request.data
-        ser_data = SnippetSerializer(instance=snippet, data=data, partial=True)
-        if ser_data.is_valid():
-            ser_data.save()
-            return Response(ser_data.data, status=status.HTTP_201_CREATED)
-        return Response(ser_data.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    def delete(self, request, pk):
-        snippet = get_object_or_404(Snippet, pk=pk)
-        snippet.delete()
-        return Response({"message": "snippet was deleted"})
+class SnippetDetail(generics.RetrieveUpdateDestroyAPIView):
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
+    queryset = Snippet.objects.all()
+    serializer_class = SnippetSerializer
 
 
+class UserList(generics.ListAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+
+class UserDetail(generics.RetrieveAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+
+@api_view(['GET'])
+def api_root(request, format=None):
+    return Response({
+        'users': reverse('user-list', request=request, format=format),
+        'snippets': reverse('snippet-list', request=request, format=format)
+    })
+
+
+class SnippetHighlight(generics.GenericAPIView):
+    queryset = Snippet.objects.all()
+    renderer_classes = [renderers.StaticHTMLRenderer]
+
+    def get(self, request, *args, **kwargs):
+        snippet = self.get_object()
+        return Response(snippet.highlighted)
