@@ -3,6 +3,6 @@ from .views import *
 
 
 urlpatterns = [
-    path("s/", snippet_list),
-    path("s/<int:pk>", snippet_detail),
+    path("s/", SnippetList.as_view()),
+    path("s/<int:pk>", SnippetDetail.as_view()),
 ]

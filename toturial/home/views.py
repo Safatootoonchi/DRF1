@@ -1,5 +1,5 @@
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import APIView
 from rest_framework.response import Response
 
 from .models import *
@@ -7,13 +7,13 @@ from .serializers import SnippetSerializer
 from django.shortcuts import get_object_or_404
 
 
-@api_view(["GET", "POST"])
-def snippet_list(request):
-    if request.method == "GET":
+class SnippetList(APIView):
+    def get(self, request):
         snippet = Snippet.objects.all()
         ser_data = SnippetSerializer(instance=snippet, many=True)
         return Response(data=ser_data.data, status=status.HTTP_200_OK)
-    elif request.method == "POST":
+
+    def post(self, request):
         data = request.data
         ser_data = SnippetSerializer(data=data)
         if ser_data.is_valid():
@@ -22,13 +22,15 @@ def snippet_list(request):
         return Response(data=ser_data.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(["GET", "PUT", "DELETE"])
-def snippet_detail(request, pk):
-    snippet = get_object_or_404(Snippet, pk=pk)
-    if request.method == "GET":
+class SnippetDetail(APIView):
+
+    def get(self, request, pk):
+        snippet = get_object_or_404(Snippet, pk=pk)
         ser_data = SnippetSerializer(instance=snippet)
         return Response(ser_data.data, status=status.HTTP_200_OK)
-    elif request.method == "PUT":
+
+    def put(self, request, pk):
+        snippet = get_object_or_404(Snippet, pk=pk)
         data = request.data
         ser_data = SnippetSerializer(instance=snippet, data=data, partial=True)
         if ser_data.is_valid():
@@ -36,6 +38,9 @@ def snippet_detail(request, pk):
             return Response(ser_data.data, status=status.HTTP_201_CREATED)
         return Response(ser_data.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    elif request.method == "DELETE":
+    def delete(self, request, pk):
+        snippet = get_object_or_404(Snippet, pk=pk)
         snippet.delete()
         return Response({"message": "snippet was deleted"})
+
+
