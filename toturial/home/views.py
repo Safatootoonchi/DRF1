@@ -1,55 +1,54 @@
-from django.contrib.auth.models import User
-from rest_framework import status, permissions
-from rest_framework.decorators import APIView, api_view
+from django.http import HttpResponse
+from rest_framework import status, generics
+from rest_framework.decorators import APIView
 from rest_framework.response import Response
-from rest_framework.reverse import reverse
 
-from .permissions import IsOwnerOrReadOnly
 from .models import *
-from .serializers import SnippetSerializer, UserSerializer
+from .serializers import AlbumSerializer
 from django.shortcuts import get_object_or_404
-from rest_framework import mixins
-from rest_framework import generics
-from rest_framework import renderers
 
 
-class SnippetList(generics.ListCreateAPIView):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
-    queryset = Snippet.objects.all()
-    serializer_class = SnippetSerializer
+# class AlbumList(APIView):
+#     def get(self, request):
+#         albums = Album.objects.all()
+#         ser_data = AlbumSerializer(instance=albums, many=True)
+#         return Response(data=ser_data.data, status=status.HTTP_200_OK)
+#
+#     def post(self, request):
+#         data = request.data
+#         ser_data = AlbumSerializer(data=data)
+#         if ser_data.is_valid():
+#             ser_data.save()
+#             return Response(data=ser_data.data, status=status.HTTP_201_CREATED)
+#         return Response(data=ser_data.errors, status=status.HTTP_400_BAD_REQUEST)
+#
+#
+# class AlbumDetail(APIView):
+#     def get(self, request, pk):
+#         album = get_object_or_404(Album, pk=pk)
+#         ser_data = AlbumSerializer(instance=album)
+#         return Response(data=ser_data.data, status=status.HTTP_200_OK)
+#
+#     def put(self, request, pk):
+#         album = get_object_or_404(Album, pk=pk)
+#         data = request.data
+#         ser_data = AlbumSerializer(instance=album, data=data)
+#         if ser_data.is_valid():
+#             ser_data.save()
+#             return Response(data=ser_data.data, status=status.HTTP_201_CREATED)
+#         return Response(data=ser_data.errors, status=status.HTTP_400_BAD_REQUEST)
+#
+#     def delete(self, request, pk):
+#         album = get_object_or_404(Album, pk=pk)
+#         album.delete()
+#         return Response({"message": "album was deleted"}, status=status.HTTP_204_NO_CONTENT)
 
-    def perform_create(self, serializer):
-        serializer.save(owner=self.request.user)
+
+class AlbumList(generics.ListCreateAPIView):
+    queryset = Album.objects.all()
+    serializer_class = AlbumSerializer
 
 
-class SnippetDetail(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
-    queryset = Snippet.objects.all()
-    serializer_class = SnippetSerializer
-
-
-class UserList(generics.ListAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-
-
-class UserDetail(generics.RetrieveAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-
-
-@api_view(['GET'])
-def api_root(request, format=None):
-    return Response({
-        'users': reverse('user-list', request=request, format=format),
-        'snippets': reverse('snippet-list', request=request, format=format)
-    })
-
-
-class SnippetHighlight(generics.GenericAPIView):
-    queryset = Snippet.objects.all()
-    renderer_classes = [renderers.StaticHTMLRenderer]
-
-    def get(self, request, *args, **kwargs):
-        snippet = self.get_object()
-        return Response(snippet.highlighted)
+class AlbumDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Album.objects.all()
+    serializer_class = AlbumSerializer

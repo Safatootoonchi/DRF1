@@ -1,21 +1,29 @@
 from rest_framework import serializers
-from .models import *
-from django.contrib.auth.models import User
+from .models import Album, Track
 
 
-class SnippetSerializer(serializers.HyperlinkedModelSerializer):
-    owner = serializers.ReadOnlyField(source='owner.username')
-    highlight = serializers.HyperlinkedIdentityField(view_name='snippet-highlight', format='html')
+class TrackSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Track
+        fields = ['order', 'title', 'duration']
+
+
+class AlbumSerializer(serializers.ModelSerializer):
+    queryset = Track.objects.all()
+    tracks = TrackSerializer(many=True)
 
     class Meta:
-        model = Snippet
-        fields = ['url', 'id', 'highlight', 'owner',
-                  'title', 'code', 'linenos', 'language', 'style']
+        model = Album
+        fields = ['album_name', 'artist', 'number', 'tracks']
 
+    def validate(self, data):
+        if len(data['tracks']) != data['number']:
+            raise serializers.ValidationError("number must be equal")
+        return data
 
-class UserSerializer(serializers.HyperlinkedModelSerializer):
-    snippets = serializers.HyperlinkedRelatedField(many=True, view_name='snippet-detail', read_only=True)
-
-    class Meta:
-        model = User
-        fields = ['url', 'id', 'username', 'snippets']
+    def create(self, validated_data):
+        tracks_data = validated_data.pop('tracks')
+        album = Album.objects.create(**validated_data)
+        for track_data in tracks_data:
+            Track.objects.create(album=album, **track_data)
+        return album
